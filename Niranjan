@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OREI BOT</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: black;
+      overflow: hidden;
+      color: white;
+    }
+
+    #bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+    }
+
+    .cube {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      opacity: 0.2;
+      animation: float 10s linear infinite;
+    }
+
+    .red { background: red; }
+    .green { background: green; }
+    .blue { background: blue; }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) rotate(0deg);
+      }
+      100% {
+        transform: translateY(-200px) rotate(360deg);
+      }
+    }
+
+    .chat-container {
+      position: relative;
+      z-index: 2;
+      max-width: 600px;
+      margin: 100px auto;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(0,255,0,0.4);
+    }
+
+    .messages {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .message {
+      background: #1f1f1f;
+      margin: 10px 0;
+      padding: 10px 15px;
+      border-radius: 8px;
+      text-transform: uppercase;
+    }
+
+    .user {
+      background: #0066ff;
+      align-self: flex-end;
+    }
+
+    .bot {
+      background: #00cc66;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: #ff0055;
+      color: white;
+      cursor: pointer;
+    }
+
+    h1 {
+      text-align: center;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+<div id="bg"></div>
+
+<div class="chat-container">
+  <h1>OREI BOT</h1>
+  <div class="messages" id="messages">
+    <div class="message bot">OREI RA! NENU READY!</div>
+  </div>
+  <div class="input-group">
+    <input type="text" id="userInput" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="startVoice()">Mic</button>
+  </div>
+</div>
+
+<script>
+  // Floating cubes
+  const bg = document.getElementById("bg");
+  for (let i = 0; i < 20; i++) {
+    const cube = document.createElement("div");
+    cube.classList.add("cube", ["red", "green", "blue"][i % 3]);
+    cube.style.left = Math.random() * 100 + "vw";
+    cube.style.top = Math.random() * 100 + "vh";
+    cube.style.animationDelay = `${Math.random() * 10}s`;
+    cube.style.transform = `scale(${Math.random() + 0.5})`;
+    bg.appendChild(cube);
+  }
+
+  const messages = document.getElementById("messages");
+
+  function addMessage(text, sender = "bot") {
+    const msg = document.createElement("div");
+    msg.className = `message ${sender}`;
+    msg.innerText = text.toUpperCase();
+    messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
+    if (sender === "bot") speak(text);
+  }
+
+  function speak(text) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "en-IN";
+    speechSynthesis.speak(utter);
+  }
+
+  function moodDetect(text) {
+    text = text.toLowerCase();
+    if (text.includes("happy")) return "NUVVU HAPPY UNTE NENU DOUBLE HAPPY!";
+    if (text.includes("sad")) return "SAD ENDUKU RA? COFFEE TEESKUNDAM!";
+    if (text.includes("tired")) return "OKA POWER NAP TEESKORA!";
+    if (text.includes("frustrated")) return "COOL AVVU RA! NUVVU BAAGUNTAV!";
+    if (text.includes("excited")) return "WAAH RA! EXCITEMENT FULL GA UNDI!";
+    return null;
+  }
+
+  function handleCommand(text) {
+    const mood = moodDetect(text);
+    if (mood) return addMessage(mood);
+
+    if (text.includes("remind me")) {
+      const match = text.match(/remind me about (.+) at (.+)/i);
+      if (match) {
+        const reminder = `${match[1]} AT ${match[2]}`;
+        let reminders = JSON.parse(localStorage.getItem("orei_reminders") || "[]");
+        reminders.push(reminder);
+        localStorage.setItem("orei_reminders", JSON.stringify(reminders));
+        return addMessage(`REMINDER SET CHESTUNNA: ${reminder}`);
+      }
+    }
+
+    if (text.includes("what's my plan")) {
+      const plans = JSON.parse(localStorage.getItem("orei_reminders") || "[]");
+      return addMessage(plans.length > 0 ? `IVI NE PLANS: \n- ${plans.join("\n- ")}` : "EMI LE RA, RELAX CHEYY.");
+    }
+
+    if (text.includes("call my friend")) {
+      const match = text.match(/call my friend (.+)/i);
+      if (match) return addMessage(`CALLING ${match[1]}... JUST FOR FUN RA!`);
+    }
+
+    return addMessage("ADHI ARDHAM KALEDHU RA, MAARU CHEPPU.");
+  }
+
+  function sendMessage() {
+    const input = document.getElementById("userInput");
+    const text = input.value.trim();
+    if (text) {
+      addMessage(text, "user");
+      handleCommand(text);
+      input.value = "";
+    }
+  }
+
+  function startVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.start();
+
+    recognition.onresult = function(event) {
+      const transcript = event.results[0][0].transcript;
+      addMessage(transcript, "user");
+      handleCommand(transcript);
+    };
+  }
+</script>
+
+</body>
+</html>
